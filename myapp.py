@@ -103,6 +103,9 @@ def hi():
         response += '<p>You are logged in now.</p>'
     else:
         response += '<p>You are NOT logged in.</p>'
+    print('------------------------------')
+    print(request.full_path)
+    print('------------------------------')
     return response
 
 
@@ -117,3 +120,25 @@ def do_logout():
     if 'logged_in' in session:
         session.pop('logged_in')
     return redirect(url_for('hi'))
+
+
+def redirect_back(default='hi', **kwargs):
+    for target in request.args.get('next'), request.referrer:
+        if target:
+            return redirect(target)
+    return redirect(url_for(default, **kwargs))
+
+
+@app.route('/working_on_login/')
+def make_login():
+    print('------------------------------------------------')
+    print('>>>>> make_login() is called!!! <<<<<')
+    print(request.full_path)
+    print('------------------------------------------------')
+    return redirect_back()
+
+
+@app.route('/do_big_thing/')
+def do_big_thing():
+    return '<h1>do big things</h1><a href="%s">click \
+        here to make login</a>' % url_for('make_login', next=request.full_path)
