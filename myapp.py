@@ -1,7 +1,13 @@
 # coding=utf-8
 from flask import Flask, redirect, url_for, abort, make_response, json, jsonify, request, session
+try:
+    from urlparse import urlparse, urljoin # for py3
+except ImportError:
+    from urllib.parse import urlparse, urljoin # for py2
 import click
 import os
+from jinja2 import escape
+from jinja2.utils import generate_lorem_ipsum
 
 app = Flask(__name__)
 # app.config.from_object('config')
@@ -123,18 +129,25 @@ def do_logout():
 
 
 def redirect_back(default='hi', **kwargs):
+    print('next is: ' + request.args.get('next'))
+    print('request.referrer is: ' + request.referrer)
     for target in request.args.get('next'), request.referrer:
-        if target:
+        # if target:
+        #     if is_safe_url(target):
+        #         return redirect(target)
+        if not target:
+            continue
+        if is_safe_url(target):
             return redirect(target)
     return redirect(url_for(default, **kwargs))
 
 
 @app.route('/working_on_login/')
 def make_login():
-    print('------------------------------------------------')
-    print('>>>>> make_login() is called!!! <<<<<')
+    print('\n')
+    print('         make_login() is called!')
     print(request.full_path)
-    print('------------------------------------------------')
+    print('\n')
     return redirect_back()
 
 
@@ -142,3 +155,50 @@ def make_login():
 def do_big_thing():
     return '<h1>do big things</h1><a href="%s">click \
         here to make login</a>' % url_for('make_login', next=request.full_path)
+
+
+@app.route('/do_bad_thing/')
+def do_bad_thing():
+    return '<h1>do big things</h1><a href="%s">click \
+        here to make login</a>' % url_for('make_login', next='http://www.baidu.com/')
+
+
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    print('\n')
+    print('target is: ' + target)
+    print(ref_url)
+    print(test_url)
+    print('\n')
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
+
+
+#AJAX sample
+@app.route('/post')
+def show_post():
+    post_body = generate_lorem_ipsum(n=2)
+    return '''
+<h1>A very long post</h1>
+<div class="body">%s</div>
+<button id="load">Load More</button>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script type="text/javascript">
+$(function() {
+    $('#load').click(function() {
+        $.ajax({
+            url: '/more',
+            type: 'get',
+            success: function(data){
+                $('.body').append(data);
+            }
+        })
+    })
+})
+</script>''' % post_body
+
+
+@app.route('/more')
+def load_post():
+    return generate_lorem_ipsum(n=1)
+
