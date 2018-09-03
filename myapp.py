@@ -1,5 +1,6 @@
-# coding=utf-8
-from flask import Flask, redirect, url_for, abort, make_response, json, jsonify, request, session
+# -*- coding: utf-8 -*-
+
+from flask import Flask, redirect, url_for, abort, make_response, json, jsonify, request, session, flash
 try:
     from urlparse import urlparse, urljoin # for py3
 except ImportError:
@@ -8,10 +9,21 @@ import click
 import os
 from jinja2 import escape
 from jinja2.utils import generate_lorem_ipsum
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from wtforms import TextAreaField, SubmitField
+from wtforms.validators import DataRequired
+
 
 app = Flask(__name__)
 # app.config.from_object('config')
 app.secret_key = os.getenv('SECRET_KEY', 'default simple secret key')
+app.config['SQLALCHEMY_DATABASE_URI'] = \
+        os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(app.root_path, 'data.sqlite'))
+# Flask-SQLAlchemy建议你设置SQLALCHEMY_TRACK_MODIFICATIONS配置变量,
+# 这个配置变量决定是否追踪对象的修改,这用于Flask-SQLAlchemy的事件通知系统.
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
 
 @app.route('/')
@@ -174,7 +186,7 @@ def is_safe_url(target):
     return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 
-#AJAX sample
+# AJAX sample
 @app.route('/post')
 def show_post():
     post_body = generate_lorem_ipsum(n=2)
@@ -202,3 +214,35 @@ $(function() {
 def load_post():
     return generate_lorem_ipsum(n=1)
 
+
+# Run 'flask' and see it's in Commands list
+@app.cli.command()
+def initdb():
+    """
+    Init the database
+    """
+    db.drop_all()
+    db.create_all()
+    click.echo('Initialized database')
+
+
+class Note(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Text)
+
+
+class NewNoteForm(FlaskForm):
+    body = TextAreaField('Body', validators=[DataRequired])
+    submit = SubmitField('Save')
+
+
+@app.route('/new/', methods=['GET', 'POST'])
+def new_note():
+    form = NewNoteForm()
+    if form.validate_on_submit():
+        body = form.body.data
+        note = Note(body=body)
+        db.session.add(note)
+        db.session.commit()
+        flash('Your note is saved.')
+        return redirect(url_for('hi'))
