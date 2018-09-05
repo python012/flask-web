@@ -233,6 +233,11 @@ class DeleteNoteForm(FlaskForm):
     submit = SubmitField('Delete')
 
 
+class EditNoteForm(FlaskForm):
+    body = TextAreaField('Body', validators=[DataRequired()])
+    submit = SubmitField('Update')
+
+
 @app.route('/new/', methods=['GET', 'POST'])
 def new_note():
     form = NewNoteForm()
@@ -244,6 +249,32 @@ def new_note():
         flash('Your note is saved.')
         return redirect(url_for('hi'))
     return render_template('new_note.html', form=form)
+
+
+@app.route('/edit/<int:note_id>/', methods=['GET', 'POST'])
+def edit_note(note_id):
+    form = EditNoteForm()
+    note = Note.query.get(note_id)
+    if form.validate_on_submit():
+        note.body = form.body.data
+        db.session.commit()
+        flash('The note is updated.')
+        return redirect(url_for('hi'))
+    form.body.data = note.body
+    return render_template('edit_note.html', form=form)
+
+
+@app.route('/delete/<int:note_id>/', methods=['GET', 'POST'])
+def delete_note(note_id):
+    form = DeleteNoteForm()
+    if form.validate_on_submit():
+        note = Note.query.get(note_id)
+        db.session.delete(note)
+        db.session.commit()
+        flash('The note is deleted.')
+    else:
+        about(400)
+    return redirect(url_for('hi'))
 
 
 @app.route('/hi/')
@@ -258,6 +289,6 @@ def hi():
     # print('------------------------------')
     # return response
 
-    # form = DeleteNoteForm()
+    form = DeleteNoteForm()
     notes = Note.query.all()
-    return render_template('hi.html', notes=notes)
+    return render_template('hi.html', notes=notes, form=form)
