@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Notebook</h1>
+    <a href="{{ url_for('new_note') }}">New Note</a>
+
+    <h4>{{ notes|length }} notes:</h4>
+    {% for note in notes %}
+        <h5>id: {{ note.id }}</h1>
+        <p>{{ note.body }}</p>
+    {% endfor %}
+{% endblock%}

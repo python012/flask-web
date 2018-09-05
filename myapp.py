@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from flask import Flask, redirect, url_for, abort, make_response, json, jsonify, request, session, flash
+from flask import Flask, redirect, url_for, abort, make_response, json, jsonify, request, session, flash, render_template
 try:
     from urlparse import urlparse, urljoin # for py3
 except ImportError:
@@ -17,9 +17,12 @@ from wtforms.validators import DataRequired
 
 app = Flask(__name__)
 # app.config.from_object('config')
+app.jinja_env.trim_blocks = True
+app.jinja_env.lstrip_blocks = True
 app.secret_key = os.getenv('SECRET_KEY', 'default simple secret key')
 app.config['SQLALCHEMY_DATABASE_URI'] = \
         os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(app.root_path, 'data.sqlite'))
+
 # Flask-SQLAlchemy建议你设置SQLALCHEMY_TRACK_MODIFICATIONS配置变量,
 # 这个配置变量决定是否追踪对象的修改,这用于Flask-SQLAlchemy的事件通知系统.
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -111,19 +114,6 @@ def say_hello():
 def set_cookie(name):
     response = make_response(redirect(url_for('say_hello')))
     response.set_cookie('name', name)
-    return response
-
-
-@app.route('/hi/')
-def hi():
-    response = '<h1>Flask help the world!</h1>'
-    if 'logged_in' in session:
-        response += '<p>You are logged in now.</p>'
-    else:
-        response += '<p>You are NOT logged in.</p>'
-    print('------------------------------')
-    print(request.full_path)
-    print('------------------------------')
     return response
 
 
@@ -230,10 +220,17 @@ class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
 
+    def __repr__(self):
+        return 'Note [%d] %r' % (self.id, self.body)
+
 
 class NewNoteForm(FlaskForm):
-    body = TextAreaField('Body', validators=[DataRequired])
+    body = TextAreaField('Body', validators=[DataRequired()])
     submit = SubmitField('Save')
+
+
+class DeleteNoteForm(FlaskForm):
+    submit = SubmitField('Delete')
 
 
 @app.route('/new/', methods=['GET', 'POST'])
@@ -246,3 +243,21 @@ def new_note():
         db.session.commit()
         flash('Your note is saved.')
         return redirect(url_for('hi'))
+    return render_template('new_note.html', form=form)
+
+
+@app.route('/hi/')
+def hi():
+    # response = '<h1>Flask help the world!</h1>'
+    # if 'logged_in' in session:
+    #     response += '<p>You are logged in now.</p>'
+    # else:
+    #     response += '<p>You are NOT logged in.</p>'
+    # print('------------------------------')
+    # print(request.full_path)
+    # print('------------------------------')
+    # return response
+
+    # form = DeleteNoteForm()
+    notes = Note.query.all()
+    return render_template('hi.html', notes=notes)
