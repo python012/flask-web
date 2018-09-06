@@ -237,6 +237,10 @@ class EditNoteForm(FlaskForm):
     body = TextAreaField('Body', validators=[DataRequired()])
     submit = SubmitField('Update')
 
+    # def __init__(self, lable="Update", **kwargs):
+    #     super().__init__()
+    #     self.submit.lable = wtforms.Lable(self.submit.id, lable)
+
 
 @app.route('/new/', methods=['GET', 'POST'])
 def new_note():
@@ -289,6 +293,7 @@ def hi():
     # print('------------------------------')
     # return response
 
-    form = DeleteNoteForm()
+    delete_note_form = DeleteNoteForm()
+    edit_note_form = EditNoteForm()
     notes = Note.query.all()
-    return render_template('hi.html', notes=notes, form=form)
+    return render_template('hi.html', notes=notes, delete_form=delete_note_form, edit_form=edit_note_form)
