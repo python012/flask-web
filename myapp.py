@@ -2,9 +2,9 @@
 
 from flask import Flask, redirect, url_for, abort, make_response, json, jsonify, request, session, flash, render_template
 try:
-    from urlparse import urlparse, urljoin # for py3
+    from urlparse import urlparse, urljoin  # for py3
 except ImportError:
-    from urllib.parse import urlparse, urljoin # for py2
+    from urllib.parse import urlparse, urljoin  # for py2
 import click
 import os
 from jinja2 import escape
@@ -21,7 +21,8 @@ app.jinja_env.trim_blocks = True
 app.jinja_env.lstrip_blocks = True
 app.secret_key = os.getenv('SECRET_KEY', 'default simple secret key')
 app.config['SQLALCHEMY_DATABASE_URI'] = \
-        os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(app.root_path, 'data.sqlite'))
+    os.getenv('DATABASE_URL', 'sqlite:///' +
+              os.path.join(app.root_path, 'data.sqlite'))
 
 # Flask-SQLAlchemy建议你设置SQLALCHEMY_TRACK_MODIFICATIONS配置变量,
 # 这个配置变量决定是否追踪对象的修改,这用于Flask-SQLAlchemy的事件通知系统.
@@ -296,4 +297,44 @@ def hi():
     delete_note_form = DeleteNoteForm()
     edit_note_form = EditNoteForm()
     notes = Note.query.all()
-    return render_template('hi.html', notes=notes, delete_form=delete_note_form, edit_form=edit_note_form)
+    return render_template('hi.html', \
+            notes=notes, delete_form=delete_note_form, edit_form=edit_note_form)
+
+
+@app.shell_context_processor # 标记为flash shell后会自动执行
+def generate_shell_context():
+    return dict(db=db, Note=Note, Author=Author, \
+            Article=Article, initdb=initdb, Book=Book, Writer=Writer)
+
+
+class Author(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(70), unique=True)
+    phone = db.Column(db.String(20))
+    articles = db.relationship('Article')
+
+
+class Article(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(50), index=True)
+    body = db.Column(db.Text)
+
+    # Flask-SQLlchemy自动生成的表名，是对应Model类的类名的小写形式，多个单词则用
+    # 下划线连接，表名也可以显性的在Model类里定义__tablename__熟悉，
+    # 所以这里定义db.ForeignKey，使用 author.id 参数，即表示指向 author 表的 id 字段
+    author_id = db.Column(db.Integer, db.ForeignKey('author.id'))
+
+
+class Writer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(70), unique=True)
+    books = db.relationship('Book', back_populates='writer')
+
+
+class Book(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(50), index=True)
+    writer_id = db.Column(db.Integer, db.ForeignKey('writer.id'))
+    writer = db.relationship('Writer', back_populates='books')
+
+
