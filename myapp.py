@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 
-from flask import Flask, redirect, url_for, abort, make_response, json, jsonify, request, session, flash, render_template
+import os
+
+import click
+from flask import (Flask, abort, flash, json, jsonify, make_response, redirect,
+                   render_template, request, session, url_for)
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from jinja2 import escape
+from jinja2.utils import generate_lorem_ipsum
+from wtforms import SubmitField, TextAreaField
+from wtforms.validators import DataRequired
+
 try:
     from urlparse import urlparse, urljoin  # for py3
 except ImportError:
     from urllib.parse import urlparse, urljoin  # for py2
-import click
-import os
-from jinja2 import escape
-from jinja2.utils import generate_lorem_ipsum
-from flask_sqlalchemy import SQLAlchemy
-from flask_wtf import FlaskForm
-from wtforms import TextAreaField, SubmitField
-from wtforms.validators import DataRequired
 
 
 app = Flask(__name__)
@@ -304,14 +307,15 @@ def hi():
 @app.shell_context_processor # 标记为flash shell后会自动执行
 def generate_shell_context():
     return dict(db=db, Note=Note, Author=Author, \
-            Article=Article, initdb=initdb, Book=Book, Writer=Writer)
+            Article=Article, initdb=initdb, Book=Book, \
+            Writer=Writer, Country=Country, Capital=Capital)
 
 
 class Author(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(70), unique=True)
     phone = db.Column(db.String(20))
-    articles = db.relationship('Article')
+    article = db.relationship('Article', uselist=False)
 
 
 class Article(db.Model):
@@ -337,4 +341,22 @@ class Book(db.Model):
     writer_id = db.Column(db.Integer, db.ForeignKey('writer.id'))
     writer = db.relationship('Writer', back_populates='books')
 
+
+class Country(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(70), unique=True)
+    capital = db.relationship('Capital', uselist=False)
+
+    def __repr__(self):
+        return '<Country %r>' % self.name
+
+
+class Capital(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True)
+    country_id = db.Column(db.Integer, db.ForeignKey('country.id'))
+    country = db.relationship('Country', uselist=False)
+
+    def __repr__(self):
+        return '<Capital %r>' % self.name
 
